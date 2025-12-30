@@ -284,3 +284,138 @@ It prioritizes **engineering correctness** over shortcuts.
 
 This project is for educational and research purposes only.
 The author is not responsible for misuse.
+
+
+---
+
+## Colab Quickstart
+
+This project can be run directly on **Google Colab** for demos, testing, and short crawls.
+
+> ⚠️ Colab is not recommended for very long crawls (multi-hour) due to session timeouts.
+
+---
+
+### 1. Open Google Colab
+
+Go to:  
+https://colab.research.google.com
+
+Create a **New Notebook**.
+
+---
+
+### 2. Clone the Repository
+
+Run in a Colab cell:
+
+```bash
+!git clone https://github.com/Sk-Irfan-Baba/high-performance-async-crawler.git
+%cd high-performance-async-crawler
+```
+
+---
+
+### 3. Install Dependencies
+
+```bash
+!pip install aiohttp aiosqlite beautifulsoup4 lxml
+```
+
+(`lxml` is recommended to avoid XML parsing warnings.)
+
+---
+
+### 4. (Recommended) Mount Google Drive
+
+Mounting Drive allows the SQLite database to persist across Colab restarts.
+
+```python
+from google.colab import drive
+drive.mount('/content/drive')
+```
+
+Create a folder for crawler data:
+
+```bash
+!mkdir -p /content/drive/MyDrive/crawler
+```
+
+Update `config.py`:
+
+```python
+DB_PATH = "/content/drive/MyDrive/crawler/crawler.db"
+```
+
+---
+
+### 5. Configure Crawl Target
+
+Edit `config.py`:
+
+```python
+START_URL = "https://example.com"
+DOMAIN = "example.com"
+```
+
+For Colab, consider lower resource usage:
+
+```python
+# in main_async.py
+worker_count = 10
+```
+
+---
+
+### 6. Run the Async Crawler
+
+```bash
+!python main_async.py
+```
+
+You should see output like:
+
+```
+[METRICS] visited=120 | queue=5400 | errors=0 | rate=6.8 urls/sec | uptime=20s
+```
+
+---
+
+### 7. Stop the Crawl Safely
+
+Use:
+
+**Runtime → Interrupt execution**
+
+The crawler will:
+- stop workers
+- commit SQLite state
+- exit cleanly
+
+---
+
+### 8. Export URLs
+
+After crawling:
+
+```bash
+!python export_urls.py
+```
+
+Exported URL batches appear in:
+
+```
+exports/
+```
+
+If using Drive, these files persist across sessions.
+
+---
+
+### Notes on Colab Usage
+
+- Colab already runs an event loop — avoid nested `asyncio.run()` calls
+- Sessions may disconnect after inactivity
+- Resume is safe as long as the database is stored on Drive
+
+---
