@@ -1,9 +1,12 @@
 # High-Performance Async Web Crawler
 
-A **production-grade, async web crawler** built in Python.  
-This project focuses on **correctness, performance, resume safety, and observability**, not shortcuts.
+A **production-grade, async web crawler** built in Python with a focus on:
+- correctness
+- performance
+- resume safety
+- observability
 
-It is designed to crawl large websites safely while persisting all state to disk and dynamically adapting its concurrency based on runtime conditions.
+This project is intentionally designed as a **system**, not a toy script.
 
 ---
 
@@ -12,29 +15,29 @@ It is designed to crawl large websites safely while persisting all state to disk
 ### Crawling Core
 - Asynchronous crawling using `asyncio` + `aiohttp`
 - Disk-backed queue and visited set using SQLite (WAL mode)
-- Resume-safe: crash or Ctrl+C does not lose progress
+- Resume-safe (Ctrl+C or crash does not lose progress)
 - Graceful shutdown handling
 
 ### Performance
 - Adaptive concurrency (AIMD-style tuning)
 - Bounded parallelism using semaphores
-- Batched SQLite commits for high throughput
-- Sustains 8–12 URLs/sec on real-world sites
+- Batched SQLite commits
+- Sustained 8–12 URLs/sec on large real-world sites
 
 ### Observability
 - Periodic metrics reporting:
-  - Visited URLs
-  - Queue size
-  - Error count
-  - Crawl rate (URLs/sec)
-  - Uptime
+  - visited URLs
+  - queue size
+  - error count
+  - crawl rate (URLs/sec)
+  - uptime
 - Persistent error logging in SQLite
 
 ### Data Pipeline
 - Incremental URL batch exporter
 - Timestamped, non-overwriting export files
 - Resume-safe exporting using cursor-based state
-- Enables downstream processing while crawling continues
+- URLs can be processed while crawl continues
 
 ---
 
@@ -43,31 +46,31 @@ It is designed to crawl large websites safely while persisting all state to disk
 ```
 .
 ├── core/
-│   ├── crawler_async.py      # Async crawler engine
-│   ├── crawler.py            # Synchronous crawler (baseline)
+│   ├── crawler_async.py
+│   ├── crawler.py
 │   └── fetcher_async.py
 ├── storage/
-│   └── sqlite_store_async.py # SQLite persistence layer
+│   └── sqlite_store_async.py
 ├── utils/
-│   ├── metrics.py            # Metrics & observability
-│   ├── concurrency.py        # Adaptive concurrency controller
-│   └── exporter.py           # URL batch exporter
-├── main_async.py             # Async entry point
-├── main.py                   # Sync entry point
-├── export_urls.py            # Exporter CLI
-├── config.py                 # Configuration
-└── README.txt
+│   ├── metrics.py
+│   ├── concurrency.py
+│   └── exporter.py
+├── main_async.py
+├── main.py
+├── export_urls.py
+├── config.py
+└── README.md
 ```
 
 ---
 
 ## Installation
 
-Create a virtual environment (recommended):
+Create and activate a virtual environment:
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 ```
 
 Install dependencies:
@@ -94,59 +97,85 @@ USER_AGENT = "AdaptiveAsyncCrawler/1.0"
 
 ## Running the Crawler
 
-### Asynchronous Crawl (Recommended)
+### Async Crawl (Recommended)
 
 ```bash
 python main_async.py
 ```
 
-Features enabled:
-- Async crawling
-- Adaptive concurrency
-- Metrics reporting
-- Error logging
-- Resume safety
+Enabled by default:
+- async crawling
+- adaptive concurrency
+- metrics reporting
+- error logging
+- resume safety
 
 Stop safely anytime using **Ctrl+C**.
 
 ---
 
-### Synchronous Crawl (Baseline)
+### Sync Crawl (Baseline)
 
 ```bash
 python main.py
 ```
 
-Useful for:
-- Comparison benchmarking
-- Debugging
-- Understanding baseline behavior
+Useful for benchmarking and comparison only.
 
 ---
 
-## Adjusting Concurrency & Workers
+## Command-Line Flags
 
-### Worker Count
+### Disable Crawl Policies (Experimental)
 
-In `main_async.py`:
-
-```python
-worker_count=25
+```bash
+python main.py --no-policy
+python main_async.py --no-policy
 ```
 
-Rule:
+Effect:
+- Disables depth limits and crawl rules
+- Useful for experimentation
+- NOT recommended for large public sites
+
+---
+
+### Enable Sitemap-Based Crawling
+
+```bash
+python main.py --use-sitemap
+python main_async.py --use-sitemap
+```
+
+Behavior:
+- Attempts to discover URLs from `sitemap.xml`
+- Falls back to link-based crawling if sitemap is unavailable
+- Safe to combine with depth limits
+
+---
+
+### Adjust Worker Count
+
+Edit `main_async.py`:
+
+```python
+worker_count = 25
+```
+
+Guideline:
+
 ```
 worker_count >= max_concurrency
 ```
 
-Workers control task availability.  
-Semaphores control actual network concurrency.
+Workers control task throughput.  
+Concurrency controller limits network pressure.
 
 ---
 
-### Adaptive Concurrency Limits
+### Adjust Concurrency Limits
 
-In `main_async.py`:
+Edit `main_async.py`:
 
 ```python
 ConcurrencyController(
@@ -159,8 +188,8 @@ ConcurrencyController(
 
 Behavior:
 - Slowly increases concurrency on success
-- Aggressively backs off on errors or high RTT
-- Protects target servers automatically
+- Quickly backs off on failures or high RTT
+- Prevents server overload
 
 ---
 
@@ -173,7 +202,7 @@ Example:
 [TUNER] Adjusted concurrency → 10
 ```
 
-Metrics are printed by a **single reporter task** to avoid duplication.
+Metrics are printed by a **single reporter task**.
 
 ---
 
@@ -197,20 +226,18 @@ ORDER BY id DESC;
 
 ## URL Exporter
 
-Export discovered URLs incrementally while crawling continues.
-
-### Run exporter
+Export discovered URLs incrementally.
 
 ```bash
 python export_urls.py
 ```
 
-### Export behavior
+Behavior:
 - Writes timestamped batch files
-- Never overwrites existing exports
+- Never overwrites previous exports
 - Maintains progress in `exports/state.json`
 
-Example output:
+Example:
 
 ```
 exports/
@@ -222,13 +249,13 @@ exports/
 
 ## Resume Safety
 
-All crawl state is persisted:
-- Queue
-- Visited URLs
-- Errors
-- Export cursor
+All state is persisted:
+- crawl queue
+- visited URLs
+- errors
+- export cursor
 
-You can stop and restart the crawler without data loss.
+Stopping and restarting continues exactly where it left off.
 
 ---
 
@@ -237,19 +264,19 @@ You can stop and restart the crawler without data loss.
 - Respect website terms of service
 - Use conservative concurrency limits
 - Identify yourself via User-Agent
-- Avoid crawling sites you do not own or have permission to crawl
+- Do not crawl sites without permission
 
 ---
 
 ## Why This Project
 
-This crawler was built to:
-- Go beyond toy scripts
-- Demonstrate real async system design
-- Handle long-running crawls safely
-- Show measurable performance improvements
+This crawler demonstrates:
+- real async system design
+- persistence-first architecture
+- adaptive concurrency control
+- long-running task safety
 
-It prioritizes **correctness and architecture** over shortcuts.
+It prioritizes **engineering correctness** over shortcuts.
 
 ---
 
