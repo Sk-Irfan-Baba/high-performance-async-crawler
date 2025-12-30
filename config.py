@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-START_URL = "https://www.alukah.net/"
+START_URL = "https://www.example.com/"
 DOMAIN = urlparse(START_URL).netloc
 
 DB_PATH = "crawler.db"
