@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# Databases & runtime
+*.db
+exports/
+*.log
+
+# Virtual environments
+.env
+.venv
+sqlite-crawler/
